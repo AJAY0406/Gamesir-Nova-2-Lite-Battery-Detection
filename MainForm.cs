@@ -74,7 +74,7 @@ internal sealed class MainForm : Form
         menu.Items.Add("Refresh", null, async (_, _) => await RefreshAsync());
         menu.Items.Add("Copy status", null, (_, _) => Clipboard.SetText($"{percentLabel.Text} — {statusLabel.Text}"));
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Exit", null, (_, _) => { allowClose = true; Close(); });
+        menu.Items.Add("Exit", null, (_, _) => ExitCompletely());
         tray.Text = "Nova Battery";
         tray.Icon = Icon;
         tray.Visible = true;
@@ -184,6 +184,16 @@ internal sealed class MainForm : Form
         Show();
         WindowState = FormWindowState.Normal;
         Activate();
+    }
+
+    private void ExitCompletely()
+    {
+        allowClose = true;
+        timer.Stop();
+        tray.Visible = false;
+        Close();
+        Application.ExitThread();
+        Environment.Exit(0);
     }
 
     protected override void Dispose(bool disposing)
