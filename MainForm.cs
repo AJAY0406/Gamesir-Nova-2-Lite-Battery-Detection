@@ -15,7 +15,6 @@ internal sealed class MainForm : Form
     private bool refreshing;
     private bool allowClose;
     private bool lowBatteryNotified;
-    private int? lastPercent;
 
     internal MainForm()
     {
@@ -125,16 +124,14 @@ internal sealed class MainForm : Form
 
         if (reading.Percent is int exact)
         {
-            lastPercent = exact;
             SettingsStore.SaveLastPercent(exact);
         }
-        else lastPercent ??= SettingsStore.LoadLastPercent();
 
-        int? display = reading.Percent ?? (reading.IsCharging ? lastPercent : null);
+        int? display = reading.Percent;
         percentLabel.Text = display is int p ? $"{p}%" : reading.IsCharging ? "Charging" : "—";
         statusLabel.Text = reading.IsCharging ? "Charging" : "On battery";
-        detailLabel.Text = reading.IsCharging && reading.Percent is null && display is not null
-            ? $"Last known level • {reading.Connection} • updated {DateTime.Now:t}"
+        detailLabel.Text = reading.IsCharging && reading.Percent is null
+            ? $"Percentage unavailable • {reading.Connection} • updated {DateTime.Now:t}"
             : $"{reading.Connection} • updated {DateTime.Now:t}";
         batteryBar.Value = Math.Clamp(display ?? 0, 0, 100);
         SetTray(display, reading.IsCharging,

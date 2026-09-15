@@ -24,12 +24,31 @@ internal static class NovaBatteryReader
             return BatteryReading.Disconnected("No compatible GameSir HID interface was found.");
 
         var errors = new List<string>();
+        BatteryReading? chargingReading = null;
+        BatteryReading? unavailableReading = null;
         foreach (var device in candidates)
         {
             try
             {
                 BatteryReading? reading = await QueryAsync(device, cancellationToken);
-                if (reading is not null) return reading;
+                if (reading is null) continue;
+
+                // Some wired identities return only 0xFF (charging), while a
+                // second vendor collection may still expose the numeric level.
+                // Keep looking and merge both facts if a percentage is found.
+                if (reading.Percent is int)
+                {
+                    return chargingReading is null
+                        ? reading
+                        : reading with
+                        {
+                            IsCharging = true,
+                            Connection = chargingReading.Connection
+                        };
+                }
+
+                if (reading.IsCharging) chargingReading ??= reading;
+                else unavailableReading ??= reading;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -40,6 +59,9 @@ internal static class NovaBatteryReader
                 errors.Add($"{device.ProductId:X4}: {ex.Message}");
             }
         }
+
+        if (chargingReading is not null) return chargingReading;
+        if (unavailableReading is not null) return unavailableReading;
 
         string detail = errors.Count > 0
             ? string.Join("; ", errors)
@@ -100,11 +122,20 @@ internal static class NovaBatteryReader
         }
 
         sb.AppendLine();
-        BatteryReading reading = await ReadAsync();
-        sb.AppendLine($"Query: {reading.ToConsoleString()}");
-        if (reading.RawFrame is { Length: > 0 })
-            sb.AppendLine($"Frame: {Convert.ToHexString(reading.RawFrame)}");
-        if (!string.IsNullOrWhiteSpace(reading.Error)) sb.AppendLine($"Detail: {reading.Error}");
+        foreach (var device in devices.Where(d => d.UsagePage == VendorUsagePage && d.OutputLength >= 65))
+        {
+            try
+            {
+                BatteryReading? reading = await QueryAsync(device, CancellationToken.None);
+                sb.AppendLine($"Query PID {device.ProductId:X4}: {reading?.ToConsoleString() ?? "No battery reply"}");
+                if (reading?.RawFrame is { Length: > 0 })
+                    sb.AppendLine($"Frame PID {device.ProductId:X4}: {Convert.ToHexString(reading.RawFrame)}");
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"Query PID {device.ProductId:X4}: {ex.Message}");
+            }
+        }
         return sb.ToString();
     }
 }
