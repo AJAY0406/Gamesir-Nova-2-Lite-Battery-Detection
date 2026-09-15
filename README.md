@@ -16,8 +16,9 @@ The produced EXE is self-contained, so the computer that runs it does not need
 is not code-signed.
 
 Alternatively, push this folder to GitHub. The included **Build Windows EXE**
-workflow compiles it on a Windows runner. Download `NovaBattery-Windows-x64`
-from the workflow run's **Artifacts** section and extract `NovaBattery.exe`.
+workflow compiles it on a Windows runner and publishes `NovaBattery.exe` on the
+repository's **Releases** page. It is also available as the
+`NovaBattery-Windows-x64` workflow artifact.
 
 ## Features
 
