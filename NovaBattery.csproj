@@ -10,5 +10,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>1.0.0</Version>
   </PropertyGroup>
-</Project>
 
+  <ItemGroup>
+    <Compile Remove="src/**/*.cs" />
+  </ItemGroup>
+</Project>
