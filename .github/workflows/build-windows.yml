@@ -1,0 +1,52 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish self-contained EXE
+        shell: pwsh
+        run: >-
+          dotnet publish src/NovaBattery/NovaBattery.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          -o dist
+
+      - name: Upload NovaBattery.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaBattery-Windows-x64
+          path: dist/NovaBattery.exe
+          if-no-files-found: error
+
+      - name: Publish downloadable release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "build-$env:GITHUB_RUN_NUMBER"
+          "dist/NovaBattery.exe#NovaBattery.exe"
+          --title "Nova Battery build $env:GITHUB_RUN_NUMBER"
+          --notes "Automatic Windows x64 build."
+          --latest
